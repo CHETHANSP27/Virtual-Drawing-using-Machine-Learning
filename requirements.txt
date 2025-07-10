@@ -1,3 +1,6 @@
+# requirements.txt is used in Dockerfile only
+
+
 # absl-py==2.3.0 ; python_version >= "3.12"
 # attrs==25.3.0 ; python_version >= "3.12"
 # cffi==1.17.1 ; python_version >= "3.12"
@@ -31,15 +34,15 @@
 
 
 
-streamlit
-streamlit-webrtc
-opencv-python-headless
-mediapipe==0.10.21
-numpy
-pillow
-protobuf
-attrs
-aiortc
-av
-typing-extensions
-click
+# streamlit
+# streamlit-webrtc
+# opencv-python-headless
+# mediapipe==0.10.21
+# numpy
+# pillow
+# protobuf
+# attrs
+# aiortc
+# av
+# typing-extensions
+# click
