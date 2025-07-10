@@ -34,7 +34,7 @@
 streamlit
 streamlit-webrtc
 opencv-python-headless
-mediapipe
+mediapipe==0.10.21
 numpy
 pillow
 protobuf
