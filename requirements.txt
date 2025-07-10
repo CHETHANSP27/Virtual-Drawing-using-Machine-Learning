@@ -49,7 +49,7 @@
 
 streamlit
 streamlit-webrtc
-mediapipe==0.10.21
+mediapipe>=0.10.21
 opencv-python-headless
 numpy
 pillow

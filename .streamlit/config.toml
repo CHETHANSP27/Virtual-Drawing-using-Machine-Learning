@@ -1,24 +1,2 @@
-[global]
-developmentMode = false
-
 [server]
-runOnSave = false
-allowRunOnSave = false
-port = 8501
-enableCORS = false
-enableXsrfProtection = false
-maxUploadSize = 200
-
-[browser]
-gatherUsageStats = false
-showErrorDetails = true
-
-[theme]
-base = "dark"
-primaryColor = "#1e88e5"
-backgroundColor = "#0e1117"
-secondaryBackgroundColor = "#262730"
-textColor = "#fafafa"
-
-[experimental]
-useDeprecatedPyPIPackages = true
+pythonVersion = "3.11"
