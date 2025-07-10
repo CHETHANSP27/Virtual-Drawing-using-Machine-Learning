@@ -31,28 +31,24 @@
 
 
 
-# Streamlit and WebRTC
-streamlit==1.28.0
-streamlit-webrtc==0.47.1
+# Core Streamlit and WebRTC
+streamlit>=1.28.0
+streamlit-webrtc>=0.47.1
 
-# Computer Vision and ML (your existing dependencies)
+# Computer Vision and ML
 opencv-python-headless==4.8.1.78
 mediapipe==0.10.21
-numpy==1.26.4
-pillow==11.2.1
+numpy>=1.24.0,<2.0.0
+pillow>=9.0.0
 
 # Core dependencies
-protobuf==4.25.8
-attrs==25.3.0
+protobuf>=3.20.0,<5.0.0
+attrs>=22.0.0
 
-# Additional dependencies for web deployment
-aiortc==1.4.0
-av==10.0.0
+# WebRTC dependencies
+aiortc>=1.4.0
+av>=10.0.0
 
-# Optional: If you need matplotlib for any visualizations
-matplotlib==3.8.0
-
-# Remove these problematic packages for web deployment:
-# sounddevice (not needed for web)
-# opencv-contrib-python (conflicts with opencv-python-headless)
-# jax/jaxlib (heavy packages not needed for this app)
+# Additional web deployment dependencies
+typing-extensions>=4.0.0
+click>=8.0.0

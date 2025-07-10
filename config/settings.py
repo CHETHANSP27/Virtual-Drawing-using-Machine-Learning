@@ -51,53 +51,42 @@
 # MASK_DTYPE = 'uint8'
 # MASK_INITIAL_VALUE = 255
 
-
 """
-Configuration settings for Virtual Drawing Application
-Streamlit-compatible version
+Configuration settings for the Virtual Drawing Application
 """
 
 # Window dimensions
 WINDOW_WIDTH = 640
 WINDOW_HEIGHT = 480
 
-# Hand detection settings
-MIN_DETECTION_CONFIDENCE = 0.7
+# Hand detection parameters
+MIN_DETECTION_CONFIDENCE = 0.5
 MIN_TRACKING_CONFIDENCE = 0.5
 MAX_NUM_HANDS = 1
 
-# Drawing settings
+# Drawing parameters
 DEFAULT_THICKNESS = 3
 ERASER_RADIUS = 20
 INDEX_FINGER_THRESHOLD = 30
 
-# UI settings
+# Tool positioning
 TOOL_MARGIN_LEFT = 50
-TOOL_MARGIN_TOP = 50
-TOOL_MAX_X = 300
-TOOL_MAX_Y = 100
+TOOL_WIDTH = 50
+TOOL_HEIGHT = 50
 
-# Colors for different tools
+# Colors (BGR format for OpenCV)
 COLORS = {
-    "line_preview": (255, 0, 0),      # Blue for line preview
-    "rectangle_preview": (0, 255, 0), # Green for rectangle preview
-    "circle_preview": (0, 0, 255),    # Red for circle preview
-    "circle_mask": 0,                 # Black for circle on mask
-    "eraser": (0, 0, 0),             # Black for eraser
-    "ui_background": (255, 255, 255), # White for UI background
-    "ui_text": (0, 0, 0),            # Black for UI text
-    "selection_indicator": (0, 255, 255), # Yellow for selection
+    "line_preview": (255, 0, 0),        # Blue
+    "rectangle_preview": (0, 255, 0),   # Green
+    "circle_preview": (0, 0, 255),      # Red
+    "circle_mask": (0, 0, 0),           # Black for mask
+    "eraser": (255, 255, 255),          # White
+    "ui_background": (50, 50, 50),      # Dark gray
+    "ui_text": (255, 255, 255),         # White
+    "ui_active": (0, 255, 255),         # Yellow
 }
 
-# Tool positions (relative to tool area)
-TOOL_POSITIONS = {
-    "line": (25, 25),
-    "rectangle": (75, 25),
-    "draw": (125, 25),
-    "circle": (175, 25),
-    "erase": (225, 25),
-}
-
-# Selection timing
-SELECTION_FRAMES = 10
-SELECTION_RADIUS = 20
+# UI settings
+UI_HEADER_HEIGHT = 80
+UI_TOOL_SIZE = 50
+UI_SPACING = 10

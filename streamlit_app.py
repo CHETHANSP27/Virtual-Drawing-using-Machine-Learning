@@ -5,20 +5,33 @@ Main application entry point for web deployment
 import streamlit as st
 import cv2
 import numpy as np
-from streamlit_webrtc import webrtc_streamer, VideoTransformerBase, RTCConfiguration
-import av
 import sys
 import os
 import threading
-import queue
+import traceback
 
 # Add project root to path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# Import your existing modules
-from core.hand_detector import HandDetector
-from core.drawing_tools import DrawingTools
-from utils.ui_helpers import UIHelpers
+# Import streamlit-webrtc components
+try:
+    from streamlit_webrtc import webrtc_streamer, VideoTransformerBase, RTCConfiguration
+    import av
+    WEBRTC_AVAILABLE = True
+except ImportError as e:
+    st.error(f"WebRTC components not available: {e}")
+    WEBRTC_AVAILABLE = False
+
+# Import your existing modules with error handling
+try:
+    from core.hand_detector import HandDetector
+    from core.drawing_tools import DrawingTools
+    from utils.ui_helpers import UIHelpers
+    MODULES_AVAILABLE = True
+except ImportError as e:
+    st.error(f"Failed to import modules: {e}")
+    st.error("Please check your project structure and dependencies.")
+    MODULES_AVAILABLE = False
 
 # Configuration
 WINDOW_WIDTH = 640
@@ -39,87 +52,106 @@ st.set_page_config(
 
 class VirtualDrawingTransformer(VideoTransformerBase):
     def __init__(self):
-        self.hand_detector = HandDetector()
-        self.drawing_tools = DrawingTools()
-        self.ui_helpers = UIHelpers()
-        self.tools_image = None
-        
-        # Try to load tools image, if it fails, we'll create a simple UI
+        if not MODULES_AVAILABLE:
+            raise ImportError("Required modules not available")
+            
         try:
-            self.tools_image = self.ui_helpers.load_tools_image()
-        except:
+            self.hand_detector = HandDetector()
+            self.drawing_tools = DrawingTools()
+            self.ui_helpers = UIHelpers()
             self.tools_image = None
-        
-        # State management
-        self.frame_lock = threading.Lock()
-        self.current_tool_display = "select tool"
+            
+            # Try to load tools image, if it fails, we'll create a simple UI
+            try:
+                self.tools_image = self.ui_helpers.load_tools_image()
+            except:
+                self.tools_image = None
+            
+            # State management
+            self.frame_lock = threading.Lock()
+            self.current_tool_display = "select tool"
+            
+        except Exception as e:
+            st.error(f"Failed to initialize transformer: {e}")
+            raise e
         
     def transform(self, frame):
-        img = frame.to_ndarray(format="bgr24")
-        
-        # Resize to standard dimensions
-        img = cv2.resize(img, (WINDOW_WIDTH, WINDOW_HEIGHT))
-        
-        # Flip frame horizontally for mirror effect
-        img = cv2.flip(img, 1)
-        
-        with self.frame_lock:
-            # Detect hands
-            results = self.hand_detector.detect_hands(img)
+        try:
+            img = frame.to_ndarray(format="bgr24")
             
-            if results.multi_hand_landmarks:
-                for hand_landmarks in results.multi_hand_landmarks:
-                    # Draw hand landmarks
-                    self.hand_detector.draw_landmarks(img, hand_landmarks)
-                    
-                    # Get finger positions
-                    finger_positions = self.hand_detector.get_finger_positions(hand_landmarks)
-                    x, y = finger_positions['index_tip']
-                    
-                    # Handle tool selection
-                    selected_tool, selection_indicator = self.ui_helpers.handle_tool_selection(
-                        x, y, self.drawing_tools.get_tool_from_position
-                    )
-                    
-                    if selected_tool:
-                        self.drawing_tools.set_current_tool(selected_tool)
-                        self.current_tool_display = selected_tool
-                    
-                    # Check if user is drawing (index finger raised)
-                    is_drawing = self.hand_detector.is_index_raised(
-                        finger_positions['middle_tip'][1],
-                        finger_positions['middle_pip']
-                    )
-                    
-                    # Process drawing
-                    self.drawing_tools.process_drawing(img, finger_positions, is_drawing)
-                    
-                    # Draw selection indicator if active
-                    if selection_indicator:
-                        x_sel, y_sel, radius = selection_indicator
-                        cv2.circle(img, (x_sel, y_sel), radius, (0, 255, 255), 2)
+            # Resize to standard dimensions
+            img = cv2.resize(img, (WINDOW_WIDTH, WINDOW_HEIGHT))
             
-            # Apply drawing mask to frame
-            img = self.drawing_tools.apply_mask_to_frame(img)
+            # Flip frame horizontally for mirror effect
+            img = cv2.flip(img, 1)
             
-            # Draw UI elements
-            self.ui_helpers.draw_ui_elements(
-                img, self.tools_image, self.drawing_tools.current_tool
-            )
+            with self.frame_lock:
+                # Detect hands
+                results = self.hand_detector.detect_hands(img)
+                
+                if results.multi_hand_landmarks:
+                    for hand_landmarks in results.multi_hand_landmarks:
+                        # Draw hand landmarks
+                        self.hand_detector.draw_landmarks(img, hand_landmarks)
+                        
+                        # Get finger positions
+                        finger_positions = self.hand_detector.get_finger_positions(hand_landmarks)
+                        x, y = finger_positions['index_tip']
+                        
+                        # Handle tool selection
+                        selected_tool, selection_indicator = self.ui_helpers.handle_tool_selection(
+                            x, y, self.drawing_tools.get_tool_from_position
+                        )
+                        
+                        if selected_tool:
+                            self.drawing_tools.set_current_tool(selected_tool)
+                            self.current_tool_display = selected_tool
+                        
+                        # Check if user is drawing (index finger raised)
+                        is_drawing = self.hand_detector.is_index_raised(
+                            finger_positions['middle_tip'][1],
+                            finger_positions['middle_pip']
+                        )
+                        
+                        # Process drawing
+                        self.drawing_tools.process_drawing(img, finger_positions, is_drawing)
+                        
+                        # Draw selection indicator if active
+                        if selection_indicator:
+                            x_sel, y_sel, radius = selection_indicator
+                            cv2.circle(img, (x_sel, y_sel), radius, (0, 255, 255), 2)
+                
+                # Apply drawing mask to frame
+                img = self.drawing_tools.apply_mask_to_frame(img)
+                
+                # Draw UI elements
+                self.ui_helpers.draw_ui_elements(
+                    img, self.tools_image, self.drawing_tools.current_tool
+                )
+                
+                # Add simple tool indicator if tools_image not available
+                if self.tools_image is None:
+                    cv2.putText(img, f"Tool: {self.drawing_tools.current_tool}", 
+                               (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
             
-            # Add simple tool indicator if tools_image not available
-            if self.tools_image is None:
-                cv2.putText(img, f"Tool: {self.drawing_tools.current_tool}", 
-                           (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-        
-        return img
+            return img
+            
+        except Exception as e:
+            # Return error frame
+            error_img = np.zeros((WINDOW_HEIGHT, WINDOW_WIDTH, 3), dtype=np.uint8)
+            cv2.putText(error_img, f"Error: {str(e)}", (10, 50), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
+            return error_img
     
     def clear_canvas(self):
         """Clear the drawing canvas"""
-        with self.frame_lock:
-            self.drawing_tools.mask = np.ones((WINDOW_HEIGHT, WINDOW_WIDTH)) * 255
-            self.drawing_tools.mask = self.drawing_tools.mask.astype('uint8')
-            self.drawing_tools.var_inits = False
+        try:
+            with self.frame_lock:
+                self.drawing_tools.mask = np.ones((WINDOW_HEIGHT, WINDOW_WIDTH)) * 255
+                self.drawing_tools.mask = self.drawing_tools.mask.astype('uint8')
+                self.drawing_tools.var_inits = False
+        except Exception as e:
+            st.error(f"Failed to clear canvas: {e}")
 
 def main():
     # Custom CSS for better styling
@@ -154,15 +186,52 @@ def main():
         color: white;
         text-align: center;
     }
+    .error-box {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 5px;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
     </style>
     """, unsafe_allow_html=True)
     
     # Main header
     st.markdown('<div class="main-header">🎨 Virtual Drawing System</div>', unsafe_allow_html=True)
     
+    # Check if all dependencies are available
+    if not MODULES_AVAILABLE:
+        st.markdown("""
+        <div class="error-box">
+        <h3>❌ Module Import Error</h3>
+        <p>Some required modules could not be imported. Please check:</p>
+        <ul>
+            <li>All files are in the correct directory structure</li>
+            <li>All dependencies are installed</li>
+            <li>Python path is configured correctly</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+        return
+    
+    if not WEBRTC_AVAILABLE:
+        st.markdown("""
+        <div class="error-box">
+        <h3>❌ WebRTC Not Available</h3>
+        <p>WebRTC components are not available. Please install streamlit-webrtc:</p>
+        <code>pip install streamlit-webrtc</code>
+        </div>
+        """, unsafe_allow_html=True)
+        return
+    
     # Create transformer instance
-    if 'transformer' not in st.session_state:
-        st.session_state.transformer = VirtualDrawingTransformer()
+    try:
+        if 'transformer' not in st.session_state:
+            st.session_state.transformer = VirtualDrawingTransformer()
+    except Exception as e:
+        st.error(f"Failed to initialize the drawing system: {e}")
+        st.error("Please check your configuration and try again.")
+        return
     
     # Sidebar controls
     with st.sidebar:
@@ -193,16 +262,6 @@ def main():
         5. **Clear**: Use clear button when needed
         """)
         
-        # Gesture Guide
-        st.markdown("---")
-        st.subheader("✋ Gesture Guide")
-        st.markdown("""
-        - **Index Finger Up**: Drawing mode
-        - **Index Finger Down**: Navigation mode
-        - **Point to Tool Area**: Select tools
-        - **Move Hand**: Control cursor
-        """)
-        
         # Current tool display
         current_tool = st.session_state.transformer.drawing_tools.current_tool
         st.markdown(f"""
@@ -219,21 +278,26 @@ def main():
         st.subheader("📹 Camera Feed")
         
         # WebRTC streamer
-        webrtc_ctx = webrtc_streamer(
-            key="virtual-drawing",
-            video_transformer_factory=lambda: st.session_state.transformer,
-            rtc_configuration=RTC_CONFIGURATION,
-            media_stream_constraints={"video": True, "audio": False},
-            async_processing=True,
-        )
-        
-        # Status display
-        if webrtc_ctx.state.playing:
-            st.markdown('<div class="status-success">✅ Camera Active - Ready to Draw!</div>', 
-                       unsafe_allow_html=True)
-        else:
-            st.markdown('<div class="status-error">❌ Camera Inactive - Click START to begin</div>', 
-                       unsafe_allow_html=True)
+        try:
+            webrtc_ctx = webrtc_streamer(
+                key="virtual-drawing",
+                video_transformer_factory=lambda: st.session_state.transformer,
+                rtc_configuration=RTC_CONFIGURATION,
+                media_stream_constraints={"video": True, "audio": False},
+                async_processing=True,
+            )
+            
+            # Status display
+            if webrtc_ctx.state.playing:
+                st.markdown('<div class="status-success">✅ Camera Active - Ready to Draw!</div>', 
+                           unsafe_allow_html=True)
+            else:
+                st.markdown('<div class="status-error">❌ Camera Inactive - Click START to begin</div>', 
+                           unsafe_allow_html=True)
+                
+        except Exception as e:
+            st.error(f"WebRTC Error: {e}")
+            st.error("Please check your internet connection and browser permissions.")
     
     with col2:
         st.subheader("🎨 Features")
@@ -251,19 +315,6 @@ def main():
         
         for feature in features:
             st.markdown(f"- {feature}")
-        
-        # System status
-        st.markdown("---")
-        st.subheader("📊 System Status")
-        
-        if webrtc_ctx.state.playing:
-            st.success("🟢 Camera: Active")
-            st.success("🟢 Hand Detection: Ready")
-            st.success("🟢 Drawing Tools: Loaded")
-        else:
-            st.error("🔴 Camera: Inactive")
-            st.warning("🟡 Hand Detection: Waiting")
-            st.warning("🟡 Drawing Tools: Standby")
         
         # Tips
         st.markdown("---")
