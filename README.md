@@ -2,6 +2,9 @@
 
 A computer vision-based virtual drawing application that allows users to draw in the air using hand gestures. The application uses MediaPipe for hand detection and OpenCV for real-time video processing and drawing operations.
 
+🌐 **Live Demo**: [Click to Try the App](https://virtual-drawing-using-machine-learning-production.up.railway.app/)  
+📂 **GitHub Repo**: [CHETHANSP27/Virtual-Drawing-using-Machine-Learning](https://github.com/CHETHANSP27/Virtual-Drawing-using-Machine-Learning)
+
 ## Features
 
 - **Real-time Hand Detection**: Uses MediaPipe for accurate hand landmark detection with 21 hand landmarks
